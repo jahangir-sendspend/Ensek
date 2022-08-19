@@ -1,0 +1,76 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Ensek Test</h1>
+    <p>Please upload the CSV file.</p>
+    <button onclick="    showFileUploader();" style="z-index:0;">Upload CSV</button>
+    <input id="fileUploader" type="file" style="display:none;" onchange="callAPI();" />
+    <div>
+        <div id="error"></div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Account Id</th>
+                    <th>Meter Reading</th>
+                    <th>Meter Reading Date Time</th>
+                    <th>Upload Status</th>
+                </tr>
+            </thead>
+            <tbody id="results">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function showFileUploader() {
+        $('#fileUploader').trigger('click');
+    }
+
+    function callAPI() {
+        $('#results').val('');
+        var formData = new FormData();
+        formData.append('file', $('#fileUploader')[0].files[0]);
+
+        @{
+            IConfigurationRoot configuration = new ConfigurationBuilder()
+                  .SetBasePath(Directory.GetCurrentDirectory())
+                  .AddJsonFile("appsettings.json")
+                  .Build();
+                var baseUrl = configuration.GetSection("EnsekAPI:Url").Value;
+        }
+
+        $.ajax({
+            type: 'post',
+            url: '@(baseUrl)/meter-reading-uploads',
+            data: formData,
+            success: function(d) {
+                if (d.d.code == "OK") {
+                    var records = []
+                    records = JSON.parse(d.d.html);
+                    for (var i = 0; i < records.length; i++) {
+                        $('#results').append('<tr><td>' + records[i].AccountId + '</td>'
+                            + '<td>' + String(records[i].MeterReadValue) + '</td>'
+                            + '<td>' + records[i].MeterReadingDateTime + '</td>'
+                            + '<td>' + records[i].DataStatus + '</td></tr>');
+                    }
+                    alert("API successful.");
+                } else {
+                    alert("API error. Messsage: " + d.d.message);
+                }
+            },
+            processData: false,
+            contentType: false,
+            error: function() {
+                alert("Whoops something went wrong!");
+            }
+        });
+
+        $('#fileUploader').val('');
+    }
+
+</script>
